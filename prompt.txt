@@ -1,0 +1,153 @@
+Project Specification for Cursor (AI-Assisted Development)
+Project Goal
+
+Build an Android application that automatically captures a shelf image once per day, detects and counts different product types using a YOLO-based object detection model, stores historical data, visualizes analytical tables and charts, and after one week recommends which products have higher investment and restocking value based on data-driven analysis.
+
+Tech Stack
+
+Android: Kotlin, Android SDK
+
+Camera: CameraX
+
+Background Tasks: WorkManager
+
+AI Model: YOLOv8 (PyTorch)
+
+Model Inference: ONNX Runtime or TorchScript
+
+Backend: FastAPI (Python)
+
+Server Runtime: Uvicorn
+
+Database: PostgreSQL
+
+ORM: SQLAlchemy
+
+Data Analysis: Pandas, NumPy
+
+Charts (Android): MPAndroidChart
+
+Storage: AWS S3 or Google Cloud Storage
+
+Deployment: Docker
+
+Functional Requirements
+1. Android App
+
+Create an Android app in Kotlin.
+
+Use CameraX to capture shelf images.
+
+Automatically take one image per day using WorkManager.
+
+Allow manual image capture.
+
+Upload images to the backend API.
+
+Display daily product counts.
+
+Display weekly analytical tables and charts.
+
+2. Object Detection & Counting
+
+Train a YOLOv8 model to detect multiple product classes.
+
+Use PyTorch for training.
+
+Use OpenCV for image preprocessing.
+
+Export the trained model to ONNX or TorchScript.
+
+Run inference on uploaded images.
+
+Count detected objects per product class.
+
+Return structured JSON results.
+
+3. Backend API
+
+Build REST APIs using FastAPI.
+
+Endpoint to receive images from the Android app.
+
+Run YOLO inference on images.
+
+Store detection results in the database.
+
+Provide APIs for historical and analytical data.
+
+4. Database
+
+Use PostgreSQL.
+
+Tables:
+
+products (id, name, category)
+
+daily_counts (product_id, date, count)
+
+images (image_id, date, path, confidence_summary)
+
+Support weekly aggregation queries.
+
+5. Analytics & Visualization
+
+Use Pandas and NumPy for data analysis.
+
+Generate daily and weekly summaries.
+
+Calculate:
+
+average daily demand
+
+growth rate
+
+demand consistency
+
+Send analytics results to the Android app.
+
+Render charts using MPAndroidChart.
+
+6. Weekly Recommendation Engine
+
+Analyze 7 days of data per product.
+
+Rank products based on:
+
+demand growth
+
+consistency
+
+stock turnover proxy
+
+Generate explanations for each recommendation.
+
+Return recommendation results via API.
+
+7. Deployment
+
+Dockerize backend and AI services.
+
+Deploy on cloud infrastructure.
+
+Ensure scalable API and inference performance.
+
+Non-Functional Requirements
+
+Daily task must be reliable even if the app is in background.
+
+Detection accuracy should be logged and monitored.
+
+System should be modular and extensible.
+
+Code should be clean, documented, and production-ready.
+
+Expected Output
+
+Daily automated shelf image capture
+
+Accurate counting of different product types
+
+Analytical tables and trend charts
+
+Weekly investment and restocking recommendations with explanations

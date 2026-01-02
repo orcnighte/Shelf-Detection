@@ -1,0 +1,25 @@
+# YOLO dataset configuration
+# Copy this file to data.yaml and update paths
+
+# Dataset path
+path: ./dataset  # dataset root dir
+train: images/train  # train images (relative to 'path')
+val: images/val  # val images (relative to 'path')
+test: images/test  # test images (optional)
+
+# Classes
+names:
+  0: Coca Cola
+  1: Pepsi
+  2: Water Bottle
+  3: Chips
+  4: Snacks
+  5: Energy Drink
+  # Add more product classes as needed
+
+# Number of classes
+nc: 6
+
+
+
+

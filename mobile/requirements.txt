@@ -1,0 +1,8 @@
+kivy==2.2.0
+kivymd==1.1.1
+plyer==2.1.0
+requests==2.31.0
+Pillow==10.1.0
+
+
+

@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Android
+android/.gradle/
+android/.idea/
+android/local.properties
+android/*.iml
+android/app/build/
+android/build/
+android/.externalNativeBuild/
+android/.cxx/
+android/app/release/
+
+# Model files
+*.pt
+*.onnx
+*.pth
+models/
+runs/
+
+# Storage
+storage/
+*.jpg
+*.jpeg
+*.png
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+
+

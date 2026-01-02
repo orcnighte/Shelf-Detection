@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل مدیریت - Dashboard</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Vazir:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-boxes"></i>
+            <h2>پنل مدیریت</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#products" class="nav-item active" data-section="products">
+                <i class="fas fa-box"></i>
+                <span>محصولات</span>
+            </a>
+            <a href="#images" class="nav-item" data-section="images">
+                <i class="fas fa-images"></i>
+                <span>تصاویر</span>
+            </a>
+            <a href="#upload" class="nav-item" data-section="upload">
+                <i class="fas fa-upload"></i>
+                <span>آپلود تصویر</span>
+            </a>
+            <a href="#analytics" class="nav-item" data-section="analytics">
+                <i class="fas fa-chart-line"></i>
+                <span>تحلیل‌ها</span>
+            </a>
+            <a href="/" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span>صفحه اصلی</span>
+            </a>
+            <a href="/logout/" class="nav-item">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>خروج</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <h1 id="page-title">مدیریت محصولات</h1>
+            <div class="header-actions">
+                <button class="btn-icon" id="refresh-btn">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Products Section -->
+        <section id="products-section" class="content-section active">
+            <div class="section-header">
+                <h2>لیست محصولات</h2>
+                <button class="btn btn-primary" id="add-product-btn">
+                    <i class="fas fa-plus"></i>
+                    افزودن محصول
+                </button>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>شناسه</th>
+                            <th>نام محصول</th>
+                            <th>دسته‌بندی</th>
+                            <th>تاریخ ایجاد</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-table-body">
+                        <tr>
+                            <td colspan="5" class="loading">در حال بارگذاری...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Images Section -->
+        <section id="images-section" class="content-section">
+            <div class="section-header">
+                <h2>لیست تصاویر</h2>
+            </div>
+            <div class="images-grid" id="images-grid">
+                <div class="loading">در حال بارگذاری...</div>
+            </div>
+        </section>
+
+        <!-- Upload Section -->
+        <section id="upload-section" class="content-section">
+            <div class="upload-container">
+                <h2>آپلود تصویر قفسه</h2>
+                <p class="upload-description">تصویر قفسه را انتخاب کنید تا محصولات به صورت خودکار شناسایی شوند</p>
+                
+                <div class="upload-area" id="upload-area">
+                    <input type="file" id="image-input" accept="image/*" style="display: none;">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <p>برای آپلود کلیک کنید یا فایل را اینجا بکشید</p>
+                    <span class="upload-hint">فرمت‌های مجاز: JPG, PNG, JPEG</span>
+                </div>
+
+                <div id="upload-progress" class="upload-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <p class="progress-text">در حال پردازش...</p>
+                </div>
+
+                <div id="upload-result" class="upload-result" style="display: none;">
+                    <h3>نتایج تشخیص:</h3>
+                    <div id="detection-results"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analytics Section -->
+        <section id="analytics-section" class="content-section">
+            <div class="analytics-container">
+                <h2>تحلیل‌های هفتگی</h2>
+                <div class="analytics-cards" id="analytics-cards">
+                    <div class="loading">در حال بارگذاری...</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal for Add/Edit Product -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">افزودن محصول جدید</h3>
+                <button class="modal-close" id="close-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="product-form">
+                <input type="hidden" id="product-id">
+                <div class="form-group">
+                    <label for="product-name">نام محصول *</label>
+                    <input type="text" id="product-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-category">دسته‌بندی</label>
+                    <input type="text" id="product-category">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-btn">انصراف</button>
+                    <button type="submit" class="btn btn-primary">ذخیره</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <script src="{% static 'js/dashboard.js' %}"></script>
+</body>
+</html>
+
