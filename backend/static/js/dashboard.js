@@ -330,17 +330,26 @@ async function uploadImage(file) {
 function displayUploadResult(result) {
     const resultsDiv = document.getElementById('detection-results');
     
+    const numModels = result.detections ? result.detections.length : 0;
+    
     resultsDiv.innerHTML = `
         <div class="detection-item">
             <span>کل محصولات شناسایی شده:</span>
             <span class="badge">${result.total_products}</span>
         </div>
-        ${result.detections.map(det => `
-            <div class="detection-item">
-                <span>${det.product_name}</span>
-                <span class="badge">${det.count} عدد (${(det.confidence * 100).toFixed(1)}%)</span>
-            </div>
-        `).join('')}
+        <div class="detection-item">
+            <span>تعداد مدل‌های مختلف:</span>
+            <span class="badge">${numModels} مدل</span>
+        </div>
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+            <h4 style="margin-bottom: 15px; color: #1e293b;">جزئیات محصولات:</h4>
+            ${result.detections.map(det => `
+                <div class="detection-item" style="margin-bottom: 10px;">
+                    <span>${det.product_name}</span>
+                    <span class="badge">${det.count} عدد (${(det.confidence * 100).toFixed(1)}%)</span>
+                </div>
+            `).join('')}
+        </div>
     `;
 }
 
