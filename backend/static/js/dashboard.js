@@ -222,12 +222,14 @@ function displayImages(images) {
         if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
             // Relative path - make it absolute for media
             imageUrl = imageUrl.replace(/\\/g, '/');
-            if (!imageUrl.startsWith('storage/')) {
-                imageUrl = `storage/images/${imageUrl.split('/').pop()}`;
+            if (!imageUrl.startsWith('images/')) {
+                imageUrl = `images/${imageUrl.split('/').pop()}`;
             }
             imageUrl = `/media/${imageUrl}`;
-        } else if (imageUrl.includes('storage')) {
+        } else if (imageUrl.includes('images')) {
             imageUrl = `/media/${imageUrl.replace(/\\/g, '/')}`;
+        } else if (!imageUrl.startsWith('/media/')) {
+            imageUrl = `/media/${imageUrl}`;
         }
         
         return `

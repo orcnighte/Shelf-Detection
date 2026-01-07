@@ -153,7 +153,9 @@ class StorageService:
     
     def __init__(self):
         self.storage_type = getattr(settings, 'STORAGE_TYPE', 'local')
-        self.local_storage_path = getattr(settings, 'LOCAL_STORAGE_PATH', 'storage/images')
+        # Use MEDIA_ROOT for storage
+        media_root = getattr(settings, 'MEDIA_ROOT', os.path.join(settings.BASE_DIR, 'media'))
+        self.local_storage_path = os.path.join(media_root, 'images')
         os.makedirs(self.local_storage_path, exist_ok=True)
     
     def upload_file(self, local_path: str, original_filename: str) -> str:
@@ -165,9 +167,8 @@ class StorageService:
         filename = f"{timestamp}_{original_filename}"
         storage_path = os.path.join(self.local_storage_path, filename)
         shutil.copy2(local_path, storage_path)
-        # Return relative path for database storage
-        relative_path = os.path.relpath(storage_path, settings.BASE_DIR)
-        return relative_path.replace('\\', '/')
+        # Return path relative to MEDIA_ROOT for serving
+        return os.path.join('images', filename).replace('\\', '/')
 
 
 

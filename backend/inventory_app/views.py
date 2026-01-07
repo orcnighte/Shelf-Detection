@@ -40,23 +40,41 @@ recommendation_service = RecommendationService()
 @api_view(['POST'])
 def upload_image(request):
     """Upload a shelf image, run YOLO inference, and store results"""
-    if 'file' not in request.FILES:
-        return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
-    
     try:
+        # Check if file is provided
+        if 'file' not in request.FILES:
+            return Response({
+                'error': 'فایل ارسال نشده است',
+                'message': 'لطفاً یک فایل تصویر انتخاب کنید'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
         uploaded_file = request.FILES['file']
         
-        # Save uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
-            for chunk in uploaded_file.chunks():
-                tmp_file.write(chunk)
-            tmp_path = tmp_file.name
+        # Validate file type
+        if not uploaded_file.name.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
+            return Response({
+                'error': 'فرمت فایل نامعتبر است',
+                'message': 'لطفاً یک فایل تصویر (JPG, PNG, GIF) ارسال کنید'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Save uploaded file temporarily
+        tmp_path = None
         try:
-            # Run inference
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
+                for chunk in uploaded_file.chunks():
+                    tmp_file.write(chunk)
+                tmp_path = tmp_file.name
+            
+            # Run inference (IF/ELSE for two image types)
             start_time = time.time()
             detections = inference_service.run_inference(tmp_path)
             processing_time = time.time() - start_time
+            
+            if not detections:
+                return Response({
+                    'error': 'هیچ محصولی شناسایی نشد',
+                    'message': 'لطفاً یک تصویر معتبر از قفسه ارسال کنید'
+                }, status=status.HTTP_400_BAD_REQUEST)
             
             # Upload to storage
             storage_path = storage_service.upload_file(tmp_path, uploaded_file.name)
@@ -103,16 +121,27 @@ def upload_image(request):
                 'image_id': db_image.id,
                 'detections': detection_results,
                 'total_products': total_products,
-                'processing_time': processing_time
+                'processing_time': round(processing_time, 2)
             }, status=status.HTTP_200_OK)
         
         finally:
             # Clean up temporary file
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except:
+                    pass
     
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"=== UPLOAD ERROR ===")
+        print(f"Error: {str(e)}")
+        print(f"Traceback: {error_trace}")
+        return Response({
+            'error': 'خطا در پردازش تصویر',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -135,71 +164,77 @@ def get_images(request):
 def products(request):
     """Get all products or create a new product"""
     if request.method == 'GET':
-        products = Product.objects.all()
-        serializer = ProductSerializer(products, many=True)
-        return Response(serializer.data)
+        try:
+            products = Product.objects.all().order_by('-id')
+            serializer = ProductSerializer(products, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({
+                'error': 'خطا در دریافت محصولات',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     elif request.method == 'POST':
         try:
-            # DRF automatically parses JSON into request.data
-            # Handle both QueryDict and regular dict
-            if hasattr(request.data, 'get'):
-                name = request.data.get('name', '').strip()
-                category = request.data.get('category', '').strip() or None
-            else:
-                # Fallback: try to parse from body
-                try:
-                    body_data = json.loads(request.body.decode('utf-8'))
-                    name = body_data.get('name', '').strip()
-                    category = body_data.get('category', '').strip() or None
-                except:
-                    # Last resort: form data
-                    name = request.POST.get('name', '').strip()
-                    category = request.POST.get('category', '').strip() or None
+            # Parse request data
+            name = None
+            category = None
             
-            # Debug logging
-            print(f"=== PRODUCT CREATE DEBUG ===")
-            print(f"Request method: {request.method}")
-            print(f"Content-Type: {request.content_type}")
-            print(f"Request.data type: {type(request.data)}")
-            print(f"Request.data: {request.data}")
-            print(f"Name: {name}")
-            print(f"Category: {category}")
+            # Try to get from request.data (DRF parsed)
+            if hasattr(request, 'data') and request.data:
+                if isinstance(request.data, dict):
+                    name = request.data.get('name', '').strip()
+                    category = request.data.get('category', '').strip() or None
+                elif hasattr(request.data, 'get'):
+                    name = request.data.get('name', '').strip()
+                    category = request.data.get('category', '').strip() or None
+            
+            # Fallback: try to parse from body
+            if not name:
+                try:
+                    if request.body:
+                        body_data = json.loads(request.body.decode('utf-8'))
+                        name = body_data.get('name', '').strip()
+                        category = body_data.get('category', '').strip() or None
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    pass
+            
+            # Last resort: form data
+            if not name:
+                name = request.POST.get('name', '').strip()
+                category = request.POST.get('category', '').strip() or None
             
             # Validate name
             if not name:
-                print("ERROR: Name is empty")
                 return Response({
                     'error': 'نام محصول الزامی است',
-                    'message': 'نام محصول الزامی است'
+                    'message': 'لطفاً نام محصول را وارد کنید'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Check if product already exists
+            if Product.objects.filter(name=name).exists():
+                return Response({
+                    'error': 'این محصول قبلاً ثبت شده است',
+                    'message': f'محصول "{name}" در سیستم موجود است'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             # Create product
-            try:
-                product = Product.objects.create(
-                    name=name,
-                    category=category
-                )
-                print(f"SUCCESS: Product created with ID {product.id}")
-                serializer = ProductSerializer(product)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            except Exception as db_error:
-                print(f"DB ERROR: {str(db_error)}")
-                import traceback
-                print(traceback.format_exc())
-                return Response({
-                    'error': f'خطا در ذخیره در دیتابیس',
-                    'message': str(db_error)
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            product = Product.objects.create(
+                name=name,
+                category=category
+            )
+            
+            serializer = ProductSerializer(product)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
                 
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
-            print(f"=== GENERAL ERROR ===")
+            print(f"=== PRODUCT CREATE ERROR ===")
             print(f"Error: {str(e)}")
             print(f"Traceback: {error_trace}")
             return Response({
-                'error': f'خطا در ذخیره محصول',
+                'error': 'خطا در ذخیره محصول',
                 'message': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
