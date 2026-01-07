@@ -7,12 +7,7 @@ from rest_framework import status
 from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.core.mail import send_mail
-from django.utils.crypto import get_random_string
+# Authentication removed - no login required
 from django.utils import timezone as tz
 from datetime import date, timedelta, datetime
 import json
@@ -456,13 +451,12 @@ def weekly_recommendations(request):
 
 
 def home(request):
-    """Home page view"""
-    return render(request, 'home.html')
+    """Home page view - redirect to dashboard"""
+    return redirect('dashboard')
 
 
-@login_required(login_url='/login/')
 def dashboard(request):
-    """Dashboard view"""
+    """Dashboard view - no authentication required"""
     try:
         return render(request, 'dashboard.html')
     except Exception as e:
@@ -470,160 +464,11 @@ def dashboard(request):
         print(f"=== DASHBOARD ERROR ===")
         print(f"Error: {str(e)}")
         print(traceback.format_exc())
-        messages.error(request, 'خطا در بارگذاری داشبورد')
-        return redirect('login')
+        from django.http import HttpResponse
+        return HttpResponse(f'خطا در بارگذاری داشبورد: {str(e)}', status=500)
 
 
-def register_view(request):
-    """User registration view"""
-    try:
-        if request.user.is_authenticated:
-            return redirect('dashboard')
-        
-        if request.method == 'POST':
-            username = request.POST.get('username', '').strip()
-            email = request.POST.get('email', '').strip()
-            password = request.POST.get('password', '')
-            password2 = request.POST.get('password2', '')
-            
-            # Validation
-            if not username or not email or not password:
-                messages.error(request, 'لطفاً تمام فیلدها را پر کنید')
-                return render(request, 'auth/register.html')
-            
-            if password != password2:
-                messages.error(request, 'رمزهای عبور مطابقت ندارند')
-                return render(request, 'auth/register.html')
-            
-            if len(password) < 6:
-                messages.error(request, 'رمز عبور باید حداقل 6 کاراکتر باشد')
-                return render(request, 'auth/register.html')
-            
-            try:
-                if User.objects.filter(username=username).exists():
-                    messages.error(request, 'این نام کاربری قبلاً استفاده شده است')
-                    return render(request, 'auth/register.html')
-                
-                if User.objects.filter(email=email).exists():
-                    messages.error(request, 'این ایمیل قبلاً استفاده شده است')
-                    return render(request, 'auth/register.html')
-                
-                # Create user
-                user = User.objects.create_user(
-                    username=username,
-                    email=email,
-                    password=password
-                )
-                messages.success(request, 'ثبت نام با موفقیت انجام شد. لطفاً وارد شوید')
-                return redirect('login')
-            except Exception as e:
-                import traceback
-                print(f"=== REGISTER ERROR ===")
-                print(f"Error: {str(e)}")
-                print(traceback.format_exc())
-                messages.error(request, f'خطا در ثبت نام: {str(e)}')
-                return render(request, 'auth/register.html')
-        
-        return render(request, 'auth/register.html')
-    except Exception as e:
-        import traceback
-        print(f"=== REGISTER VIEW ERROR ===")
-        print(f"Error: {str(e)}")
-        print(traceback.format_exc())
-        messages.error(request, 'خطای غیرمنتظره رخ داد')
-        return render(request, 'auth/register.html')
-
-
-def login_view(request):
-    """User login view"""
-    try:
-        if request.user.is_authenticated:
-            return redirect('dashboard')
-        
-        if request.method == 'POST':
-            username = request.POST.get('username', '').strip()
-            password = request.POST.get('password', '')
-            
-            if not username or not password:
-                messages.error(request, 'لطفاً نام کاربری و رمز عبور را وارد کنید')
-                return render(request, 'auth/login.html')
-            
-            # Try to authenticate with username or email
-            user = None
-            try:
-                if '@' in username:
-                    try:
-                        user_obj = User.objects.get(email=username)
-                        user = authenticate(request, username=user_obj.username, password=password)
-                    except User.DoesNotExist:
-                        pass
-                else:
-                    user = authenticate(request, username=username, password=password)
-            except Exception as e:
-                print(f"=== AUTHENTICATION ERROR ===")
-                print(f"Error: {str(e)}")
-            
-            if user is not None:
-                login(request, user)
-                next_url = request.GET.get('next', 'dashboard')
-                return redirect(next_url)
-            else:
-                messages.error(request, 'نام کاربری یا رمز عبور اشتباه است')
-                return render(request, 'auth/login.html')
-        
-        return render(request, 'auth/login.html')
-    except Exception as e:
-        import traceback
-        print(f"=== LOGIN VIEW ERROR ===")
-        print(f"Error: {str(e)}")
-        print(traceback.format_exc())
-        messages.error(request, 'خطای غیرمنتظره رخ داد')
-        return render(request, 'auth/login.html')
-
-
-def logout_view(request):
-    """User logout view"""
-    logout(request)
-    messages.success(request, 'با موفقیت خارج شدید')
-    return redirect('login')
-
-
-def password_reset_view(request):
-    """Password reset request view"""
-    if request.method == 'POST':
-        email = request.POST.get('email')
-        
-        if not email:
-            messages.error(request, 'لطفاً ایمیل خود را وارد کنید')
-            return render(request, 'auth/password_reset.html')
-        
-        try:
-            user = User.objects.get(email=email)
-            # Generate reset token
-            reset_token = get_random_string(length=32)
-            # In production, save this token to database with expiration
-            
-            # Send email (configure email settings in settings.py)
-            reset_url = f"{request.scheme}://{request.get_host()}/password-reset-confirm/?token={reset_token}&email={email}"
-            
-            try:
-                send_mail(
-                    subject='بازیابی رمز عبور - Inventory Management',
-                    message=f'برای بازیابی رمز عبور خود روی لینک زیر کلیک کنید:\n{reset_url}',
-                    from_email='noreply@inventory.com',
-                    recipient_list=[email],
-                    fail_silently=False,
-                )
-                messages.success(request, 'لینک بازیابی رمز عبور به ایمیل شما ارسال شد')
-            except Exception as e:
-                # In development, show the link
-                messages.info(request, f'در حالت توسعه، لینک بازیابی: {reset_url}')
-        except User.DoesNotExist:
-            messages.error(request, 'کاربری با این ایمیل یافت نشد')
-        except Exception as e:
-            messages.error(request, f'خطا در ارسال ایمیل: {str(e)}')
-    
-    return render(request, 'auth/password_reset.html')
+# Authentication views removed - no login required
 
 
 

@@ -9,12 +9,8 @@ from inventory_app import views
 
 urlpatterns = [
     path('', views.home, name='home'),
-    path('login/', views.login_view, name='login'),
-    path('register/', views.register_view, name='register'),
-    path('logout/', views.logout_view, name='logout'),
-    path('password-reset/', views.password_reset_view, name='password_reset'),
     path('dashboard/', views.dashboard, name='dashboard'),
-    # Admin panel is hidden - only accessible via direct URL if needed
+    # API endpoints
     path('api/v1/', include('inventory_app.urls')),
 ]
 
