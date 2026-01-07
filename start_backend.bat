@@ -25,6 +25,7 @@ if not exist "backend\media" mkdir backend\media
 REM Run migrations
 echo Running database migrations...
 cd backend
+python manage.py migrate --run-syncdb
 python manage.py migrate
 
 REM Start the server

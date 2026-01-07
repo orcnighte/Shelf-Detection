@@ -154,9 +154,19 @@ def get_images(request):
     except (ValueError, TypeError):
         limit = 10
     
-    images = Image.objects.all().order_by('-date')[:limit]
-    serializer = ImageSerializer(images, many=True)
-    return Response(serializer.data)
+    try:
+        images = Image.objects.all().order_by('-date')[:limit]
+        serializer = ImageSerializer(images, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        import traceback
+        print(f"=== GET IMAGES ERROR ===")
+        print(f"Error: {str(e)}")
+        print(traceback.format_exc())
+        return Response({
+            'error': 'خطا در دریافت تصاویر',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @csrf_exempt
@@ -249,7 +259,14 @@ def delete_product(request, product_id):
     except Product.DoesNotExist:
         return Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        import traceback
+        print(f"=== DELETE PRODUCT ERROR ===")
+        print(f"Error: {str(e)}")
+        print(traceback.format_exc())
+        return Response({
+            'error': 'خطا در حذف محصول',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -262,19 +279,29 @@ def product_counts(request, product_id):
     except (ValueError, TypeError):
         days = 7
     
-    start_date = date.today() - timedelta(days=days)
-    
-    counts = DailyCount.objects.filter(
-        product_id=product_id,
-        date__gte=start_date
-    ).order_by('date')
-    
-    if not counts.exists():
-        return Response({'error': 'Product not found or no counts available'}, 
-                       status=status.HTTP_404_NOT_FOUND)
-    
-    serializer = DailyCountSerializer(counts, many=True)
-    return Response(serializer.data)
+    try:
+        start_date = date.today() - timedelta(days=days)
+        
+        counts = DailyCount.objects.filter(
+            product_id=product_id,
+            date__gte=start_date
+        ).order_by('date')
+        
+        if not counts.exists():
+            return Response({'error': 'Product not found or no counts available'}, 
+                           status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = DailyCountSerializer(counts, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        import traceback
+        print(f"=== PRODUCT COUNTS ERROR ===")
+        print(f"Error: {str(e)}")
+        print(traceback.format_exc())
+        return Response({
+            'error': 'خطا در دریافت تعداد محصولات',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -287,68 +314,88 @@ def weekly_analytics(request):
     except (ValueError, TypeError):
         days = 7
     
-    end_date = date.today()
-    start_date = end_date - timedelta(days=days - 1)
-    
-    products = Product.objects.all()
-    summaries = []
-    
-    for product in products:
-        counts = DailyCount.objects.filter(
-            product=product,
-            date__gte=start_date,
-            date__lte=end_date
-        ).order_by('date')
+    try:
+        end_date = date.today()
+        start_date = end_date - timedelta(days=days - 1)
         
-        if counts.count() >= 2:
-            count_values = [c.count for c in counts]
-            dates_list = [c.date for c in counts]
+        products = Product.objects.all()
+        summaries = []
+        
+        for product in products:
+            counts = DailyCount.objects.filter(
+                product=product,
+                date__gte=start_date,
+                date__lte=end_date
+            ).order_by('date')
             
-            summary = analytics_service.calculate_product_analytics(
-                product_id=product.id,
-                product_name=product.name,
-                counts=count_values,
-                dates=dates_list
-            )
-            summaries.append(summary)
-    
-    return Response({
-        'start_date': start_date,
-        'end_date': end_date,
-        'products': summaries
-    })
+            if counts.count() >= 2:
+                count_values = [c.count for c in counts]
+                dates_list = [c.date for c in counts]
+                
+                summary = analytics_service.calculate_product_analytics(
+                    product_id=product.id,
+                    product_name=product.name,
+                    counts=count_values,
+                    dates=dates_list
+                )
+                summaries.append(summary)
+        
+        return Response({
+            'start_date': start_date,
+            'end_date': end_date,
+            'products': summaries
+        })
+    except Exception as e:
+        import traceback
+        print(f"=== WEEKLY ANALYTICS ERROR ===")
+        print(f"Error: {str(e)}")
+        print(traceback.format_exc())
+        return Response({
+            'error': 'خطا در دریافت تحلیل‌ها',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
 def daily_summary(request):
     """Get daily summary for a specific date"""
-    target_date_str = request.GET.get('target_date')
-    if target_date_str:
-        try:
-            target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            return Response(
-                {'error': 'Invalid date format. Use YYYY-MM-DD'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-    else:
-        target_date = date.today()
-    
-    counts = DailyCount.objects.filter(date=target_date)
-    
-    return Response({
-        'date': target_date,
-        'total_products': counts.count(),
-        'total_items': sum(c.count for c in counts),
-        'products': [
-            {
-                'product_id': c.product_id,
-                'product_name': c.product.name,
-                'count': c.count
-            }
-            for c in counts
-        ]
-    })
+    try:
+        target_date_str = request.GET.get('target_date')
+        if target_date_str:
+            try:
+                target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                return Response(
+                    {'error': 'Invalid date format. Use YYYY-MM-DD'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            target_date = date.today()
+        
+        counts = DailyCount.objects.filter(date=target_date)
+        
+        return Response({
+            'date': target_date,
+            'total_products': counts.count(),
+            'total_items': sum(c.count for c in counts),
+            'products': [
+                {
+                    'product_id': c.product_id,
+                    'product_name': c.product.name,
+                    'count': c.count
+                }
+                for c in counts
+            ]
+        })
+    except Exception as e:
+        import traceback
+        print(f"=== DAILY SUMMARY ERROR ===")
+        print(f"Error: {str(e)}")
+        print(traceback.format_exc())
+        return Response({
+            'error': 'خطا در دریافت خلاصه روزانه',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -361,41 +408,51 @@ def weekly_recommendations(request):
     except (ValueError, TypeError):
         days = 7
     
-    end_date = date.today()
-    start_date = end_date - timedelta(days=days - 1)
-    
-    products = Product.objects.all()
-    product_data = []
-    
-    for product in products:
-        counts = DailyCount.objects.filter(
-            product=product,
-            date__gte=start_date,
-            date__lte=end_date
-        ).order_by('date')
+    try:
+        end_date = date.today()
+        start_date = end_date - timedelta(days=days - 1)
         
-        if counts.count() >= 3:
-            count_values = [c.count for c in counts]
-            dates_list = [c.date for c in counts]
+        products = Product.objects.all()
+        product_data = []
+        
+        for product in products:
+            counts = DailyCount.objects.filter(
+                product=product,
+                date__gte=start_date,
+                date__lte=end_date
+            ).order_by('date')
             
-            product_data.append({
-                'product': product,
-                'counts': count_values,
-                'dates': dates_list
-            })
-    
-    recommendations = recommendation_service.generate_recommendations(
-        product_data=product_data,
-        start_date=start_date,
-        end_date=end_date
-    )
-    
-    return Response({
-        'week_start': start_date,
-        'week_end': end_date,
-        'recommendations': recommendations,
-        'generated_at': timezone.now()
-    })
+            if counts.count() >= 3:
+                count_values = [c.count for c in counts]
+                dates_list = [c.date for c in counts]
+                
+                product_data.append({
+                    'product': product,
+                    'counts': count_values,
+                    'dates': dates_list
+                })
+        
+        recommendations = recommendation_service.generate_recommendations(
+            product_data=product_data,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        return Response({
+            'week_start': start_date,
+            'week_end': end_date,
+            'recommendations': recommendations,
+            'generated_at': timezone.now()
+        })
+    except Exception as e:
+        import traceback
+        print(f"=== WEEKLY RECOMMENDATIONS ERROR ===")
+        print(f"Error: {str(e)}")
+        print(traceback.format_exc())
+        return Response({
+            'error': 'خطا در دریافت توصیه‌ها',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 def home(request):
@@ -406,86 +463,122 @@ def home(request):
 @login_required(login_url='/login/')
 def dashboard(request):
     """Dashboard view"""
-    return render(request, 'dashboard.html')
+    try:
+        return render(request, 'dashboard.html')
+    except Exception as e:
+        import traceback
+        print(f"=== DASHBOARD ERROR ===")
+        print(f"Error: {str(e)}")
+        print(traceback.format_exc())
+        messages.error(request, 'خطا در بارگذاری داشبورد')
+        return redirect('login')
 
 
 def register_view(request):
     """User registration view"""
-    if request.user.is_authenticated:
-        return redirect('dashboard')
-    
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        password2 = request.POST.get('password2')
+    try:
+        if request.user.is_authenticated:
+            return redirect('dashboard')
         
-        # Validation
-        if not username or not email or not password:
-            messages.error(request, 'لطفاً تمام فیلدها را پر کنید')
-            return render(request, 'auth/register.html')
+        if request.method == 'POST':
+            username = request.POST.get('username', '').strip()
+            email = request.POST.get('email', '').strip()
+            password = request.POST.get('password', '')
+            password2 = request.POST.get('password2', '')
+            
+            # Validation
+            if not username or not email or not password:
+                messages.error(request, 'لطفاً تمام فیلدها را پر کنید')
+                return render(request, 'auth/register.html')
+            
+            if password != password2:
+                messages.error(request, 'رمزهای عبور مطابقت ندارند')
+                return render(request, 'auth/register.html')
+            
+            if len(password) < 6:
+                messages.error(request, 'رمز عبور باید حداقل 6 کاراکتر باشد')
+                return render(request, 'auth/register.html')
+            
+            try:
+                if User.objects.filter(username=username).exists():
+                    messages.error(request, 'این نام کاربری قبلاً استفاده شده است')
+                    return render(request, 'auth/register.html')
+                
+                if User.objects.filter(email=email).exists():
+                    messages.error(request, 'این ایمیل قبلاً استفاده شده است')
+                    return render(request, 'auth/register.html')
+                
+                # Create user
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password
+                )
+                messages.success(request, 'ثبت نام با موفقیت انجام شد. لطفاً وارد شوید')
+                return redirect('login')
+            except Exception as e:
+                import traceback
+                print(f"=== REGISTER ERROR ===")
+                print(f"Error: {str(e)}")
+                print(traceback.format_exc())
+                messages.error(request, f'خطا در ثبت نام: {str(e)}')
+                return render(request, 'auth/register.html')
         
-        if password != password2:
-            messages.error(request, 'رمزهای عبور مطابقت ندارند')
-            return render(request, 'auth/register.html')
-        
-        if User.objects.filter(username=username).exists():
-            messages.error(request, 'این نام کاربری قبلاً استفاده شده است')
-            return render(request, 'auth/register.html')
-        
-        if User.objects.filter(email=email).exists():
-            messages.error(request, 'این ایمیل قبلاً استفاده شده است')
-            return render(request, 'auth/register.html')
-        
-        # Create user
-        try:
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=password
-            )
-            messages.success(request, 'ثبت نام با موفقیت انجام شد. لطفاً وارد شوید')
-            return redirect('login')
-        except Exception as e:
-            messages.error(request, f'خطا در ثبت نام: {str(e)}')
-            return render(request, 'auth/register.html')
-    
-    return render(request, 'auth/register.html')
+        return render(request, 'auth/register.html')
+    except Exception as e:
+        import traceback
+        print(f"=== REGISTER VIEW ERROR ===")
+        print(f"Error: {str(e)}")
+        print(traceback.format_exc())
+        messages.error(request, 'خطای غیرمنتظره رخ داد')
+        return render(request, 'auth/register.html')
 
 
 def login_view(request):
     """User login view"""
-    if request.user.is_authenticated:
-        return redirect('dashboard')
-    
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+    try:
+        if request.user.is_authenticated:
+            return redirect('dashboard')
         
-        if not username or not password:
-            messages.error(request, 'لطفاً نام کاربری و رمز عبور را وارد کنید')
-            return render(request, 'auth/login.html')
-        
-        # Try to authenticate with username or email
-        user = None
-        if '@' in username:
+        if request.method == 'POST':
+            username = request.POST.get('username', '').strip()
+            password = request.POST.get('password', '')
+            
+            if not username or not password:
+                messages.error(request, 'لطفاً نام کاربری و رمز عبور را وارد کنید')
+                return render(request, 'auth/login.html')
+            
+            # Try to authenticate with username or email
+            user = None
             try:
-                user_obj = User.objects.get(email=username)
-                user = authenticate(request, username=user_obj.username, password=password)
-            except User.DoesNotExist:
-                pass
-        else:
-            user = authenticate(request, username=username, password=password)
+                if '@' in username:
+                    try:
+                        user_obj = User.objects.get(email=username)
+                        user = authenticate(request, username=user_obj.username, password=password)
+                    except User.DoesNotExist:
+                        pass
+                else:
+                    user = authenticate(request, username=username, password=password)
+            except Exception as e:
+                print(f"=== AUTHENTICATION ERROR ===")
+                print(f"Error: {str(e)}")
+            
+            if user is not None:
+                login(request, user)
+                next_url = request.GET.get('next', 'dashboard')
+                return redirect(next_url)
+            else:
+                messages.error(request, 'نام کاربری یا رمز عبور اشتباه است')
+                return render(request, 'auth/login.html')
         
-        if user is not None:
-            login(request, user)
-            next_url = request.GET.get('next', 'dashboard')
-            return redirect(next_url)
-        else:
-            messages.error(request, 'نام کاربری یا رمز عبور اشتباه است')
-            return render(request, 'auth/login.html')
-    
-    return render(request, 'auth/login.html')
+        return render(request, 'auth/login.html')
+    except Exception as e:
+        import traceback
+        print(f"=== LOGIN VIEW ERROR ===")
+        print(f"Error: {str(e)}")
+        print(traceback.format_exc())
+        messages.error(request, 'خطای غیرمنتظره رخ داد')
+        return render(request, 'auth/login.html')
 
 
 def logout_view(request):
